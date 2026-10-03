@@ -161,7 +161,7 @@ class CliTests(unittest.TestCase):
             text=True,
             check=True,
         )
-        self.assertIn("TokenCut 0.2.1", process.stdout)
+        self.assertIn("TokenCut 0.3.0", process.stdout)
 
 
 if __name__ == "__main__":
