@@ -139,6 +139,14 @@ class CliTests(unittest.TestCase):
             self.assertEqual(code, 1)
             self.assertEqual(json.loads(output)["findings"][0]["rule"], "TC001")
 
+    def test_repository_map_cli(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "agent.py"
+            path.write_text("import json\ndef run(): pass\n")
+            code, output, _ = self.invoke(["map", str(path), "--format", "json"])
+            self.assertEqual(code, 0)
+            self.assertEqual(json.loads(output)["modules"][0]["symbols"], ["run"])
+
     def test_benchmark_checks(self):
         result = benchmark(TokenCounter("estimate"), runs=1)
         self.assertTrue(result["all_checks_passed"])
@@ -161,7 +169,7 @@ class CliTests(unittest.TestCase):
             text=True,
             check=True,
         )
-        self.assertIn("TokenCut 0.3.0", process.stdout)
+        self.assertIn("TokenCut 0.4.0", process.stdout)
 
 
 if __name__ == "__main__":
