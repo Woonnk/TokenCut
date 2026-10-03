@@ -150,6 +150,9 @@ def parser() -> argparse.ArgumentParser:
     scan.add_argument("--exclude", action="append", default=[], help="Relative path glob to skip")
     scan.add_argument("--format", choices=["text", "json"], default="text")
     scan.add_argument("--fail-on", choices=["never", "warning", "info"], default="never")
+    fix = commands.add_parser("fix", parents=[output], help="Preview a conservative Python patch")
+    fix.add_argument("input", help="Python source file to inspect")
+    fix.add_argument("--rule", choices=["TC004"], default="TC004")
     bench = commands.add_parser(
         "bench", parents=[common, output], help="Run synthetic retention benchmarks"
     )
@@ -204,6 +207,14 @@ def run(args: argparse.Namespace) -> int:
             args.fail_on != "never"
             and (bool(result.skipped) or any(f.severity in threshold for f in result.findings))
         )
+    if args.command == "fix":
+        from .fixes import compact_json_preview
+
+        preflight([args.output], args.input, args.force)
+        result = compact_json_preview(read_text(args.input), args.input)
+        text = result.diff or "No safe patch was generated.\n"
+        write_text(args.output, text, args.force)
+        return 0
     counter = TokenCounter(
         "estimate" if args.command == "eval" and args.dry_run else args.counter,
         args.encoding,
