@@ -150,6 +150,9 @@ def parser() -> argparse.ArgumentParser:
     scan.add_argument("--exclude", action="append", default=[], help="Relative path glob to skip")
     scan.add_argument("--format", choices=["text", "json"], default="text")
     scan.add_argument("--fail-on", choices=["never", "warning", "info"], default="never")
+    mapping = commands.add_parser("map", parents=[output], help="Build a compact Python repository map")
+    mapping.add_argument("path")
+    mapping.add_argument("--format", choices=["text", "json"], default="text")
     fix = commands.add_parser("fix", parents=[output], help="Preview a conservative Python patch")
     fix.add_argument("input", help="Python source file to inspect")
     fix.add_argument("--rule", choices=["TC004"], default="TC004")
@@ -207,6 +210,14 @@ def run(args: argparse.Namespace) -> int:
             args.fail_on != "never"
             and (bool(result.skipped) or any(f.severity in threshold for f in result.findings))
         )
+    if args.command == "map":
+        from .repository_map import build_repository_map
+
+        preflight([args.output], args.path, args.force)
+        result = build_repository_map(args.path)
+        text = json_text(result.to_dict()) if args.format == "json" else result.render()
+        write_text(args.output, text, args.force)
+        return 0
     if args.command == "fix":
         from .fixes import compact_json_preview
 
