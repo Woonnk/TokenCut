@@ -39,6 +39,7 @@ evaluation command sends the selected task data to your model connection.
 | `request FILE --tool read_log=log` | Filter explicitly allowlisted tool outputs in a messages request. |
 | `trim-log FILE` | Preserve detected errors, surrounding lines, query matches, and recent output. |
 | `audit PROJECT` | Find potentially wasteful Python agent patterns, with source locations and suggestions. |
+| `map PROJECT` | Build a compact static map of Python imports, classes, and functions. |
 | `bench` | Run synthetic token-reduction and retention checks. |
 | `eval --dry-run` | Plan a paired agent evaluation without a model connection. |
 | `eval --model YOUR_MODEL` | Run baseline and optimized agents and compare correctness and total usage. |
@@ -183,6 +184,14 @@ For a review-only patch preview of a simple model-facing pretty JSON call, run
 `tokencut fix agent.py --rule TC004`. It writes a unified diff and never edits
 the source. Multi-line calls, comments inside calls, and calls that already set
 `separators` are skipped for manual review.
+
+### Repository Maps
+
+`tokencut map PROJECT` produces a compact static index of Python files, imports,
+classes, and top-level functions. Use it to route an agent to the relevant files
+before sending full source. It never imports or executes the repository. JSON is
+available with `--format json`; virtual environments, dependency folders, links,
+oversized files, and unreadable files are skipped and reported.
 
 There is intentionally no automatic source rewrite in v0.2. Dropping history,
 changing tool output, or altering a loop requires behavioral tests and approval.
