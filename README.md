@@ -179,6 +179,11 @@ Suppress a reviewed finding with an inline comment such as
 `# tokencut: ignore[TC004]`. Dependencies, virtual environments, symlinks, and
 files over 1 MiB are skipped; unreadable/skipped files are reported.
 
+For a review-only patch preview of a simple model-facing pretty JSON call, run
+`tokencut fix agent.py --rule TC004`. It writes a unified diff and never edits
+the source. Multi-line calls, comments inside calls, and calls that already set
+`separators` are skipped for manual review.
+
 There is intentionally no automatic source rewrite in v0.2. Dropping history,
 changing tool output, or altering a loop requires behavioral tests and approval.
 JavaScript/TypeScript auditing is not implemented yet.
