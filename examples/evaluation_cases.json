@@ -1,0 +1,19 @@
+[
+  {
+    "name": "retry-diagnosis",
+    "query": "Read the job log. Return JSON fields request_id (string), failure_code (string), and retry_allowed (boolean). Retries are prohibited for a permanent validation failure.",
+    "tools": {
+      "read_job_log": {
+        "kind": "log",
+        "description": "Read the job's log.",
+        "content": "INFO worker started\nINFO opening connection\nINFO processing batch\nINFO heartbeat\nINFO heartbeat\nINFO heartbeat\nINFO heartbeat\nINFO heartbeat\nINFO heartbeat\nINFO heartbeat\nINFO heartbeat\nINFO heartbeat\nERROR request_id=req-173 failure_code=PERMANENT_VALIDATION_FAILURE\nINFO closing connection\nINFO worker stopped\n"
+      }
+    },
+    "expected": {
+      "request_id": "req-173",
+      "failure_code": "PERMANENT_VALIDATION_FAILURE",
+      "retry_allowed": false
+    },
+    "required_tools": ["read_job_log"]
+  }
+]

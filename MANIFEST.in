@@ -1,0 +1,4 @@
+include LICENSE README.md SECURITY.md EVALUATION.md .gitignore
+recursive-include examples *.json *.py
+recursive-include tests *.py
+recursive-include .github *.yml

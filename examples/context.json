@@ -1,0 +1,33 @@
+{
+  "query": "Why are payment retries failing?",
+  "instructions": ["Never disclose credentials. Preserve the public API."],
+  "chunks": [
+    {
+      "id": "constraint",
+      "kind": "text",
+      "pinned": true,
+      "text": "Every payment retry must reuse its original idempotency key."
+    },
+    {
+      "id": "retry-config",
+      "kind": "json",
+      "source": "config/retries.json",
+      "text": "{\n    \"attempts\": 3,\n    \"timeout_seconds\": 30,\n    \"backoff\": {\n        \"kind\": \"exponential\",\n        \"base_seconds\": 2\n    }\n}"
+    },
+    {
+      "id": "retry-guide",
+      "source": "docs/retries.md",
+      "text": "Payment retries must use exponential backoff. A retry must preserve the request idempotency key and stop after three attempts."
+    },
+    {
+      "id": "retry-guide-copy",
+      "source": "docs/retries.md",
+      "text": "Payment retries must use exponential backoff. A retry must preserve the request idempotency key and stop after three attempts."
+    },
+    {
+      "id": "frontend-notes",
+      "source": "docs/ui.md",
+      "text": "The UI uses a compact header, four columns on desktop, and two columns on mobile. The settings screen groups typography, color, and layout controls."
+    }
+  ]
+}
