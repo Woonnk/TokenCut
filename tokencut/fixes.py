@@ -7,6 +7,8 @@ import difflib
 import re
 from dataclasses import dataclass
 
+from .javascript import SIMPLE_VERBOSE_JSON, mask_literals
+
 
 @dataclass(frozen=True)
 class FixResult:
@@ -65,3 +67,25 @@ def compact_json_preview(source: str, path: str = "<string>") -> FixResult:
         )
     )
     return FixResult(output, diff, bool(edits), skipped)
+
+
+def compact_js_json_preview(source: str, path: str = "<string>") -> FixResult:
+    """Preview removal of a literal JSON.stringify spacing argument."""
+    masked = mask_literals(source)
+    edits: list[tuple[int, int]] = []
+    for match in SIMPLE_VERBOSE_JSON.finditer(masked):
+        tail = re.search(r",\s*null\s*,\s*[1-9]\d*\s*\)$", match.group())
+        if tail:
+            edits.append((match.start() + tail.start(), match.end() - 1))
+    output = source
+    for start, end in reversed(edits):
+        output = output[:start] + output[end:]
+    diff = "".join(
+        difflib.unified_diff(
+            source.splitlines(keepends=True),
+            output.splitlines(keepends=True),
+            fromfile=f"{path} (before)",
+            tofile=f"{path} (proposed)",
+        )
+    )
+    return FixResult(output, diff, bool(edits), 0)

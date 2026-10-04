@@ -69,7 +69,7 @@ identity prevents a passing comparison gate.
 
 The default gate requires every baseline and optimized run to pass its checks,
 complete usage, the same reported model, disabled transport retries, and at least
-50% fewer total tokens. Use `--target-savings 20` to change the threshold.
+30% fewer total tokens. Use `--target-savings 20` to change the threshold.
 Zero savings never passes, even with a zero target. Exit status is `0` for a passed
 gate or valid dry run, `1` for an unsuccessful live gate, and `2` for setup errors.
 
@@ -99,7 +99,7 @@ missing required tool calls cannot pass.
 ```bash
 tokencut eval --suite examples/evaluation_cases.json --model YOUR_MODEL \
   --repeats 3 --max-steps 4 --max-completion-tokens 1024 \
-  --target-savings 50 --format json -o custom-evaluation.json
+  --target-savings 30 --format json -o custom-evaluation.json
 ```
 
 Reports omit answers and full messages by default. `--include-content` adds them

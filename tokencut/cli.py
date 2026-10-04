@@ -144,17 +144,17 @@ def parser() -> argparse.ArgumentParser:
     log.add_argument("--context", type=int, default=2)
     log.add_argument("--tail", type=int, default=6)
     scan = commands.add_parser(
-        "audit", parents=[output], help="Audit Python agent source without running it"
+        "audit", parents=[output], help="Audit Python and JS/TS agent source without running it"
     )
     scan.add_argument("path")
     scan.add_argument("--exclude", action="append", default=[], help="Relative path glob to skip")
     scan.add_argument("--format", choices=["text", "json"], default="text")
     scan.add_argument("--fail-on", choices=["never", "warning", "info"], default="never")
-    mapping = commands.add_parser("map", parents=[output], help="Build a compact Python repository map")
+    mapping = commands.add_parser("map", parents=[output], help="Build a compact code map")
     mapping.add_argument("path")
     mapping.add_argument("--format", choices=["text", "json"], default="text")
-    fix = commands.add_parser("fix", parents=[output], help="Preview a conservative Python patch")
-    fix.add_argument("input", help="Python source file to inspect")
+    fix = commands.add_parser("fix", parents=[output], help="Preview a conservative source patch")
+    fix.add_argument("input", help="Python, JavaScript, or TypeScript source file")
     fix.add_argument("--rule", choices=["TC004"], default="TC004")
     bench = commands.add_parser(
         "bench", parents=[common, output], help="Run synthetic retention benchmarks"
@@ -175,7 +175,7 @@ def parser() -> argparse.ArgumentParser:
     evaluation.add_argument("--repeats", type=int, default=1)
     evaluation.add_argument("--max-steps", type=int, default=4)
     evaluation.add_argument("--max-completion-tokens", type=int, default=1024)
-    evaluation.add_argument("--target-savings", type=float, default=50)
+    evaluation.add_argument("--target-savings", type=float, default=30)
     evaluation.add_argument("--timeout", type=float, default=30)
     evaluation.add_argument(
         "--include-content", action="store_true", help="Include sensitive answers and messages"
@@ -192,7 +192,7 @@ def run(args: argparse.Namespace) -> int:
             text = json_text(result.to_dict())
         else:
             lines = [
-                f"Audited {result.files_scanned} Python files; {len(result.findings)} findings.",
+                f"Audited {result.files_scanned} source files; {len(result.findings)} findings.",
                 "Heuristics only. No code was executed or changed.",
             ]
             for item in result.findings:
@@ -219,10 +219,15 @@ def run(args: argparse.Namespace) -> int:
         write_text(args.output, text, args.force)
         return 0
     if args.command == "fix":
-        from .fixes import compact_json_preview
+        from .fixes import compact_js_json_preview, compact_json_preview
+        from .javascript import EXTENSIONS
 
         preflight([args.output], args.input, args.force)
-        result = compact_json_preview(read_text(args.input), args.input)
+        suffix = Path(args.input).suffix
+        if suffix not in EXTENSIONS | {".py"}:
+            raise ValueError("Fix supports Python, JavaScript, and TypeScript source")
+        preview = compact_json_preview if suffix == ".py" else compact_js_json_preview
+        result = preview(read_text(args.input), args.input)
         text = result.diff or "No safe patch was generated.\n"
         write_text(args.output, text, args.force)
         return 0

@@ -5,7 +5,7 @@ from .model import Chunk, ContextPacket
 from .request import RequestResult, optimize_request
 from .tokens import TokenCounter
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 __all__ = [
     "BudgetExceeded",
     "Chunk",

@@ -147,6 +147,24 @@ class CliTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(json.loads(output)["modules"][0]["symbols"], ["run"])
 
+    def test_typescript_audit_and_fix_preview(self):
+        with tempfile.TemporaryDirectory() as directory:
+            file = Path(directory) / "agent.ts"
+            original = "const output = JSON.stringify(data, null, 2);\n"
+            file.write_text(original)
+            code, output, _ = self.invoke(["audit", str(file), "--format", "json"])
+            self.assertEqual(code, 0)
+            self.assertEqual(json.loads(output)["findings"][0]["rule"], "TC004")
+            code, diff, _ = self.invoke(["fix", str(file)])
+            self.assertEqual(code, 0)
+            self.assertIn("JSON.stringify(data)", diff)
+            self.assertEqual(file.read_text(), original)
+
+    def test_dry_run_uses_agreed_savings_target(self):
+        code, output, _ = self.invoke(["eval", "--dry-run", "--format", "json"])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(output)["target_savings_percent"], 30)
+
     def test_benchmark_checks(self):
         result = benchmark(TokenCounter("estimate"), runs=1)
         self.assertTrue(result["all_checks_passed"])
@@ -169,7 +187,7 @@ class CliTests(unittest.TestCase):
             text=True,
             check=True,
         )
-        self.assertIn("TokenCut 0.4.0", process.stdout)
+        self.assertIn("TokenCut 0.5.0", process.stdout)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-"""Compact, static maps of Python repositories for code-context retrieval."""
+"""Compact, static maps of Python and JS/TS repositories for code retrieval."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from .audit import SKIP_DIRS
+from .javascript import EXTENSIONS, inspect_module
 
 
 @dataclass(frozen=True)
@@ -27,7 +28,7 @@ class RepositoryMap:
         return {
             "modules": [asdict(module) for module in self.modules],
             "skipped": list(self.skipped),
-            "note": "Static Python AST map only. Source was not imported or executed.",
+            "note": "Static Python AST and heuristic JS/TS map. Source was not executed.",
         }
 
     def render(self) -> str:
@@ -78,8 +79,8 @@ def build_repository_map(
     root = root.resolve()
     if not root.exists():
         raise ValueError(f"Map path does not exist: {path}")
-    if root.is_file() and root.suffix != ".py":
-        raise ValueError("This version maps Python (.py) source only")
+    if root.is_file() and root.suffix not in EXTENSIONS | {".py"}:
+        raise ValueError("Map supports Python, JavaScript, and TypeScript source")
     base = root.parent if root.is_file() else root
     candidates = [root] if root.is_file() else []
     skipped: list[str] = []
@@ -91,7 +92,9 @@ def build_repository_map(
                 if name not in SKIP_DIRS and not (Path(directory) / name).is_symlink()
             )
             candidates.extend(
-                Path(directory) / name for name in sorted(files) if name.endswith(".py")
+                Path(directory) / name
+                for name in sorted(files)
+                if Path(name).suffix in EXTENSIONS | {".py"}
             )
     modules: list[ModuleMap] = []
     for file in candidates:
@@ -101,11 +104,17 @@ def build_repository_map(
             break
         try:
             if file.is_symlink() or not file.is_file() or file.stat().st_size > max_bytes:
-                skipped.append(f"{relative}: not a regular file, symlink, or larger than {max_bytes} bytes")
+                skipped.append(
+                    f"{relative}: not a regular file, symlink, or larger than {max_bytes} bytes"
+                )
                 continue
-            with tokenize.open(file) as handle:
-                tree = ast.parse(handle.read(), filename=relative)
-            modules.append(ModuleMap(relative, _imports(tree), _symbols(tree)))
+            if file.suffix == ".py":
+                with tokenize.open(file) as handle:
+                    tree = ast.parse(handle.read(), filename=relative)
+                imports, symbols = _imports(tree), _symbols(tree)
+            else:
+                imports, symbols = inspect_module(file.read_text(encoding="utf-8"))
+            modules.append(ModuleMap(relative, imports, symbols))
         except (OSError, SyntaxError, UnicodeError, RecursionError) as exc:
             skipped.append(f"{relative}: {type(exc).__name__}")
     return RepositoryMap(tuple(modules), tuple(skipped))

@@ -381,7 +381,7 @@ def plan_evaluation(
     repeats: int = 1,
     max_steps: int = 4,
     max_completion_tokens: int = 1024,
-    target_savings: float = 50,
+    target_savings: float = 30,
 ) -> dict:
     if not cases:
         raise ValueError("Evaluation needs at least one case")
@@ -418,7 +418,7 @@ def evaluate(
     repeats: int = 1,
     max_steps: int = 4,
     max_completion_tokens: int = 1024,
-    target_savings: float = 50,
+    target_savings: float = 30,
     include_content: bool = False,
 ) -> dict:
     plan = plan_evaluation(

@@ -3,8 +3,9 @@
 Inspectable token optimization for AI agents. A local Python CLI and SDK that
 profiles context, removes avoidable bulk, audits agent source, and shows its work.
 
-**Goal: fewer tokens per successful task.** Cutting input in half is a target to
-test, not a universal promise. Small, already-efficient prompts may not shrink.
+**Goal: fewer tokens per successful task.** The current evaluation target is
+30% fewer total tokens, subject to unchanged task checks; that target has not
+been verified on live tasks. Small, already-efficient prompts may not shrink.
 
 ## Quick Start
 
@@ -38,8 +39,9 @@ evaluation command sends the selected task data to your model connection.
 | `optimize FILE --budget 4000` | Compact and select context within the specified counting budget. |
 | `request FILE --tool read_log=log` | Filter explicitly allowlisted tool outputs in a messages request. |
 | `trim-log FILE` | Preserve detected errors, surrounding lines, query matches, and recent output. |
-| `audit PROJECT` | Find potentially wasteful Python agent patterns, with source locations and suggestions. |
-| `map PROJECT` | Build a compact static map of Python imports, classes, and functions. |
+| `audit PROJECT` | Find token-waste patterns in Python and JavaScript/TypeScript. |
+| `map PROJECT` | Map Python and JS/TS files, imports, classes, and functions. |
+| `fix FILE --rule TC004` | Preview conservative compact-JSON patches; source is untouched. |
 | `bench` | Run synthetic token-reduction and retention checks. |
 | `eval --dry-run` | Plan a paired agent evaluation without a model connection. |
 | `eval --model YOUR_MODEL` | Run baseline and optimized agents and compare correctness and total usage. |
@@ -161,8 +163,9 @@ It does not enforce a global model budget or send the request itself.
 
 ## Agent Code Audit
 
-Audits parse Python with the standard-library AST and never import or execute
-the project. Findings are review suggestions, not proof that waste reaches a model.
+Python audits use the standard-library AST; JS/TS audits use a conservative lexical
+scanner that masks comments, strings, and template literals. Neither imports or
+executes the project. Findings are review suggestions, not proof that waste reaches a model.
 For example, upstream code may already have bounded a `history` variable.
 
 | Rule | Pattern |
@@ -181,21 +184,24 @@ Suppress a reviewed finding with an inline comment such as
 files over 1 MiB are skipped; unreadable/skipped files are reported.
 
 For a review-only patch preview of a simple model-facing pretty JSON call, run
-`tokencut fix agent.py --rule TC004`. It writes a unified diff and never edits
-the source. Multi-line calls, comments inside calls, and calls that already set
-`separators` are skipped for manual review.
+`tokencut fix agent.py --rule TC004` or `tokencut fix agent.ts`. It writes a
+unified diff and never edits the source. Complex calls, multiline calls, and
+calls with dynamic spacing/replacers are left for manual review. Inspect the
+proposal and run your own task tests before applying it.
 
 ### Repository Maps
 
-`tokencut map PROJECT` produces a compact static index of Python files, imports,
-classes, and top-level functions. Use it to route an agent to the relevant files
-before sending full source. It never imports or executes the repository. JSON is
+`tokencut map PROJECT` produces a compact index of Python and JS/TS files,
+imports, classes, and top-level functions. Use it to route an agent to the relevant
+files before sending full source. It never executes the repository. JSON is
 available with `--format json`; virtual environments, dependency folders, links,
 oversized files, and unreadable files are skipped and reported.
 
-There is intentionally no automatic source rewrite in v0.2. Dropping history,
-changing tool output, or altering a loop requires behavioral tests and approval.
-JavaScript/TypeScript auditing is not implemented yet.
+JS/TS scanning supports .js/.jsx/.mjs/.cjs/.ts/.tsx/.mts/.cts and looks for
+history passed to model calls, model calls in braced loops, whole-file reads,
+and spaced `JSON.stringify` calls. The lightweight scanner is not a JS/TS
+parser: nested syntax and uncommon constructs may be missed. Pin important
+context and review findings before changes. Source is never rewritten automatically.
 
 ## Measurement, Not Marketing
 
@@ -234,7 +240,7 @@ a hard model-token limit. Cached tokens can reduce cost without reducing token c
 
 ## Live Evaluation
 
-Version 0.2 includes a read-only demo agent that chooses tools and returns a
+The bundled read-only demo agent chooses tools and returns a
 structured answer. The evaluator runs each task with and without TokenCut,
 checks correctness, and counts provider-reported usage across every model call.
 
@@ -265,8 +271,8 @@ budget invariants. The repository includes a CI workflow and an MIT license.
 ## Next Milestones
 
 1. Run paired evaluations against real task fixtures and production acceptance tests.
-2. Add AST-based repository maps and JavaScript/TypeScript source auditing.
-3. Generate reviewable agent-code patches with test execution and rollback.
+2. Connect repository maps to an agent and test retrieval accuracy.
+3. Extend review-only patches with test execution and rollback.
 4. Add session memory and repeated-tool-call detection with explicit freshness rules.
 
 References: [tiktoken](https://github.com/openai/tiktoken) for tokenizer usage;

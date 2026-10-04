@@ -1,4 +1,4 @@
-"""Heuristic Python source audit. Never imports or executes the audited project."""
+"""Heuristic Python/JavaScript/TypeScript audit without executing the project."""
 
 from __future__ import annotations
 
@@ -10,6 +10,8 @@ import re
 import tokenize
 from dataclasses import asdict, dataclass
 from pathlib import Path
+
+from .javascript import EXTENSIONS, inspect_waste
 
 SKIP_DIRS = {
     ".git",
@@ -228,8 +230,8 @@ def audit(
     candidates: list[Path] = []
     skipped: list[str] = []
     if root.is_file():
-        if root.suffix != ".py":
-            raise ValueError("This version audits Python (.py) source only")
+        if root.suffix not in EXTENSIONS | {".py"}:
+            raise ValueError("Audit supports Python, JavaScript, and TypeScript source")
         candidates.append(root)
         base = root.parent
     else:
@@ -249,7 +251,7 @@ def audit(
             )
             for filename in sorted(files):
                 file = Path(directory) / filename
-                if file.suffix == ".py":
+                if file.suffix in EXTENSIONS | {".py"}:
                     candidates.append(file)
     findings = []
     scanned = 0
@@ -263,9 +265,26 @@ def audit(
                     f"{relative}: not a regular file, symlink, or larger than {max_bytes} bytes"
                 )
                 continue
-            with tokenize.open(file) as handle:
-                source = handle.read()
-            findings.extend(scan_python(source, relative))
+            if file.suffix == ".py":
+                with tokenize.open(file) as handle:
+                    findings.extend(scan_python(handle.read(), relative))
+            else:
+                source = file.read_text(encoding="utf-8")
+                messages = {
+                    "TC001": ("A history-like variable is passed to a model call.",
+                              "Check whether the conversation is bounded upstream.", "warning"),
+                    "TC002": ("A model call appears inside a loop.",
+                              "Add a token/iteration limit and stop condition.", "warning"),
+                    "TC003": ("An entire file may be read into a prompt.",
+                              "Retrieve relevant functions or line ranges first.", "info"),
+                    "TC004": ("JSON is pretty-printed and may reach a prompt.",
+                              "For model-facing data, remove the spacing argument.", "info"),
+                }
+                for line, rule in inspect_waste(source):
+                    message, suggestion, severity = messages[rule]
+                    findings.append(
+                        Finding(relative, line, rule, severity, "medium", message, suggestion)
+                    )
             scanned += 1
         except (OSError, UnicodeError, SyntaxError) as exc:
             skipped.append(f"{relative}: {type(exc).__name__}")
